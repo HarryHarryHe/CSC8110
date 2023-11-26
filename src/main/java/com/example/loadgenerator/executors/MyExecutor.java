@@ -8,6 +8,14 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/***
+ * @description: Custom asynchronous threadPool,
+ * used to asynchronously start the checkTimeout method when the program starts.
+ *
+ * @author Harry
+ * @date 26/11/2023
+ * @version 1.0
+ */
 @Configuration
 @EnableAsync
 public class MyExecutor {

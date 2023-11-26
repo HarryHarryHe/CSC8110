@@ -35,11 +35,14 @@ public class LoadGenerator {
         int req_times = MyConstant.TOTAL_REQ_TIMES;
         while ((req_times--) > 0) {
             try {
+                //Get the beginning timestamp
                 long start = System.currentTimeMillis();
+                //Building URL Request
                 URL url = new URL(MyConstant.TARGET);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(10000);
+                //Build the link and get the response code
                 int responseCode = connection.getResponseCode();
 
                 //Simulate the request time, adding random numbers to demonstrate the timeout

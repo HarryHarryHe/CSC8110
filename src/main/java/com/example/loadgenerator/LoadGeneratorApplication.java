@@ -21,13 +21,4 @@ public class LoadGeneratorApplication {
         SpringApplication.run(LoadGeneratorApplication.class, args);
     }
 
-    /***
-     * This event will be started when the Spring container has fully started and refreshed
-     * @param loadGenerator
-     * @return
-     */
-//    @Bean
-//    public ApplicationListener<ContextRefreshedEvent> onReady(LoadGenerator loadGenerator) {
-//        return e -> loadGenerator.startCheckTimeout();
-//    }
 }

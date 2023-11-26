@@ -7,6 +7,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/***
+ * @description: RequestClientController is a REST controller used to
+ * handle HTTP requests related to load generation.
+ *
+ * @author Harry
+ * @date 26/11/2023
+ * @version 1.0
+ */
 @RestController
 @RequestMapping("/load")
 @Slf4j
