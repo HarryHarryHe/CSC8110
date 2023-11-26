@@ -19,6 +19,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/***
+ * @description: This method will start asynchronously, set the specified request FREQUENCY and
+ * request the specified URL, and record the response time and
+ * timeout times to global variables
+ *
+ * @author Harry
+ * @date 26/11/2023
+ * @version 1.0
+ */
 @Component
 @Slf4j
 public class LoadGenerator {
