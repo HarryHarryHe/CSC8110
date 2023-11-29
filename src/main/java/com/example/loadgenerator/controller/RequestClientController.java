@@ -3,6 +3,7 @@ package com.example.loadgenerator.controller;
 import com.example.loadgenerator.service.RequestClientService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,11 +25,11 @@ public class RequestClientController {
     RequestClientService service;
 
     @GetMapping("/getTimeout")
-    public String getTimeout(){
-        return service.getTimeout();
+    public ResponseEntity<String> getTimeout(){
+        return ResponseEntity.ok(service.getTimeout());
     }
     @GetMapping("/get")
-    public String getIt(){
-        return "hello world";
+    public ResponseEntity<String> getIt(){
+        return ResponseEntity.ok("hello world");
     }
 }
