@@ -6,9 +6,6 @@ import com.example.loadgenerator.util.MyTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
@@ -46,11 +43,20 @@ public class LoadGenerator implements CommandLineRunner {
                 .build();
     }
 
+    /***
+     * This method is automatically executed after the
+     * Spring Boot application is fully started by implementing the Command Line Runner interface.
+     * @param args
+     * @throws Exception
+     */
     @Override
     public void run(String... args) throws Exception {
         startRequest();
     }
 
+    /***
+     * Makes a request based on the given TARGET URL and FREQUENCY requested per second
+     */
     public void startRequest() {
         // Parameters validation check
         assert !MyConstant.TARGET.isBlank() : "TARGET SHOULD NOT BE BLANK";
