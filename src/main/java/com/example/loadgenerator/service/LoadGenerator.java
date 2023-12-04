@@ -102,7 +102,7 @@ public class LoadGenerator implements CommandLineRunner {
                         log.info("Request Times: " + MyConstant.REQ_TIMES.get() +
                                 ", Request URL: " + MyConstant.TARGET +
                                 ", Response statusCode: " + response.statusCode() +
-                                ", Response Timestamp: " + respTime +
+                                ", Response Timestamp: " + respTime + " ms" +
                                 ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
                                 ", Failure Times:" + MyConstant.TIMEOUT_FAILURE_COUNT.get() +
                                 ", Current DateTime: " + MyTools.date2str(new Date()));
