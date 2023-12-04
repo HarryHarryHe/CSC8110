@@ -1,14 +1,8 @@
 package com.example.loadgenerator.service;
 
 import com.example.loadgenerator.constant.MyConstant;
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Objects;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /***
  * @description: RequestClientService is a Service Layer used to
@@ -27,9 +21,9 @@ public class RequestClientService {
      * @return Type of String that includes Request Times, Request URL, AVG Response Time and Failure Times
      */
     public String getTimeout() {
-        return "Request Times: " + MyConstant.REQ_TIMES +
-                ", Request URL: " + MyConstant.TARGET + ", AVG Timeout: " +
-                Math.round((MyConstant.TOTAL_RESP_TIME / (MyConstant.REQ_TIMES == 0 ? 1 : MyConstant.REQ_TIMES))) + " ms" +
+        return "Request Times: " + MyConstant.REQ_TIMES.incrementAndGet() +
+                ", Request URL: " + MyConstant.TARGET +
+                ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
                 ", Failure Times:" + MyConstant.FAILURE_COUNT.get();
     }
 }

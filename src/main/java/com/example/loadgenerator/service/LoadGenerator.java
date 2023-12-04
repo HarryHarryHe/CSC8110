@@ -1,23 +1,24 @@
 package com.example.loadgenerator.service;
 
 import com.example.loadgenerator.constant.MyConstant;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
+import com.example.loadgenerator.executors.MyExecutor;
+import com.example.loadgenerator.util.MyTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
+import java.util.Date;
 
 /***
  * @description: This method will start asynchronously, set the specified request FREQUENCY and
@@ -32,54 +33,79 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class LoadGenerator {
 
+    @Autowired
+    private MyExecutor executorPool;
 
-    public void startCheckTimeout() {
-        checkTimeout(null);
+    private final HttpClient httpClient;
+
+    public LoadGenerator() {
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10)) // Set connection timeout 10s
+                .build();
     }
 
     @Async("asyncExecutor")
     @EventListener
-    public void checkTimeout(ContextRefreshedEvent event) {
-        long responseTime = 0;
-        int req_times = MyConstant.TOTAL_REQ_TIMES;
-        while ((req_times--) > 0) {
-            try {
-                //Get the beginning timestamp
-                long start = System.currentTimeMillis();
-                //Building URL Request
-                URL url = new URL(MyConstant.TARGET);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(10000);
-                //Build the link and get the response code
-                int responseCode = connection.getResponseCode();
+    public void startRequest(ContextRefreshedEvent event) {
+        // Parameters validation check
+        assert !MyConstant.TARGET.isBlank() : "TARGET SHOULD NOT BE BLANK";
+        assert MyConstant.FREQUENCY > 0 : "FREQUENCY SHOULD BE GREATER THAN 0";
 
-                //Simulate the request time, adding random numbers to demonstrate the timeout
-                Thread.sleep(new Random().nextInt(8000, 10000));
+        // Get the customized ThreadPoolTaskExecutor
+        ThreadPoolTaskExecutor myExecutor = executorPool.getExecutor();
 
-                MyConstant.REQ_TIMES++;
+        // Building HttpRequest
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(MyConstant.TARGET))
+                .timeout(Duration.ofSeconds(10)) // Set request timeout 10s
+                .GET()
+                .build();
 
-                long end = System.currentTimeMillis();
-                //responseTime
-                responseTime = end - start;
-                MyConstant.TOTAL_RESP_TIME += responseTime;
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    if (responseTime - MyConstant.TIMEOUT > 0) {
+        while ((MyConstant.TOTAL_REQ_TIMES--) > 0) {
+            for (int i = 0; i < MyConstant.FREQUENCY; i++) {
+                myExecutor.execute(() -> {
+                    try {
+                        // Get current timestamp
+                        long start = System.currentTimeMillis();
+                        // Create a handler that converts the body of the response to a string
+                        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                        // Get the current time after the request is completed
+                        long end = System.currentTimeMillis();
+                        // Get response time
+                        long respTime = end - start;
+                        // Calculate the total response time
+                        MyConstant.TOTAL_RESP_TIME.addAndGet(respTime);
+                        log.info("Request Times: " + MyConstant.REQ_TIMES.incrementAndGet() +
+                                ", Request URL: " + MyConstant.TARGET +
+                                ", Response statusCode: " + response.statusCode() +
+                                ", Response Timestamp: " + respTime +
+                                ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
+                                ", Failure Times:" + MyConstant.FAILURE_COUNT.get() +
+                                ", Current DateTime: " + MyTools.date2str(new Date()));
+                    } catch (HttpTimeoutException e) {
+                        log.info("HttpTimeoutException occurred");
+                        // Handling timeout exceptions
                         MyConstant.FAILURE_COUNT.incrementAndGet();
+                    } catch (IOException e) {
+                        log.info("IOException occurred: " + e);
+                    } catch (InterruptedException e) {
+                        log.info("InterruptedException occurred: " + e);
+                    } catch (Exception e) {
+                        log.info("UNKNOWN Exception occurred: " + e);
                     }
-                    log.info("Request Times: " + MyConstant.REQ_TIMES + ", Current Resp_Time: " + responseTime +
-                            ", Request URL: " + MyConstant.TARGET +
-                            ", AVG Timeout: " + Math.round(((float) MyConstant.TOTAL_RESP_TIME / (MyConstant.REQ_TIMES == 0 ? 1 : MyConstant.REQ_TIMES))) + " ms" +
-                            ", Failure Times:" + MyConstant.FAILURE_COUNT.get());
-                } else {
-                    log.info("Request failed with response code: " + responseCode);
-                }
-                Thread.sleep(1000 / MyConstant.FREQUENCY);
-            } catch (Exception e) {
-                MyConstant.FAILURE_COUNT.incrementAndGet();
-                log.info("Request failed with exception: " + e.getMessage());
+                });
+            }
+
+            try {
+                // Simulate requests per second
+                Thread.sleep(1000);
+                // Shutdown the tasks in executor pool
+//                myExecutor.shutdown();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
+
+
     }
 }

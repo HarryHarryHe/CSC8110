@@ -1,9 +1,6 @@
-FROM ubuntu:latest
-LABEL authors="Harry"
-
-ENTRYPOINT ["top", "-b"]
-
 FROM openjdk:17-jdk-slim
+
+LABEL authors="Harry"
 
 WORKDIR /myProject
 

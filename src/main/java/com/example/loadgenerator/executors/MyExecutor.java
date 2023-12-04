@@ -1,12 +1,14 @@
 package com.example.loadgenerator.executors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /***
  * @description: Custom asynchronous threadPool,
@@ -17,18 +19,32 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @version 1.0
  */
 @Configuration
-@EnableAsync
+@Slf4j
 public class MyExecutor {
-    @Bean(name = "asyncExecutor")
-    public Executor myExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(8);
-        executor.setQueueCapacity(20);
-        executor.setThreadNamePrefix("myExecutor-");
 
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+    private static final AtomicInteger REJECTED_COUNTS = new AtomicInteger(0);
+
+    @Bean(name = "asyncExecutor")
+    public ThreadPoolTaskExecutor getExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("myTask-");
+        // CorePoolSize is 8, as the machine own 4 cpus
+        executor.setCorePoolSize(8);
+        // Maximum PoolSize
+        executor.setMaxPoolSize(16);
+        // Idle lifetime of non-core threads, 30s
+        executor.setKeepAliveSeconds(30);
+        // The capacity of task queue
+        executor.setQueueCapacity(100);
+
+        // Customize the rejected policy and Override rejected policy
+        RejectedExecutionHandler handler = (runnable, exec) -> {
+            System.out.println("Info: Task submission rejected! -- " + REJECTED_COUNTS.incrementAndGet());
+        };
+        // Rejected strategy is likely DiscardOldestPolicy, that discards ths unfinished task in the queue
+        executor.setRejectedExecutionHandler(handler);
         executor.initialize();
+
         return executor;
     }
 }

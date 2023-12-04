@@ -28,8 +28,8 @@ public class RequestClientController {
     public ResponseEntity<String> getTimeout(){
         return ResponseEntity.ok(service.getTimeout());
     }
-    @GetMapping("/get")
-    public ResponseEntity<String> getIt(){
+    @GetMapping("/getHello")
+    public ResponseEntity<String> getHello(){
         return ResponseEntity.ok("hello world");
     }
 }

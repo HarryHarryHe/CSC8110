@@ -15,7 +15,6 @@ import java.net.URL;
 
 @SpringBootApplication
 @EnableAsync
-
 public class LoadGeneratorApplication {
 
     public static void main(String[] args) {
