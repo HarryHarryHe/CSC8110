@@ -21,7 +21,7 @@ public class RequestClientService {
      * @return Type of String that includes Request Times, Request URL, AVG Response Time and Failure Times
      */
     public String getTimeout() {
-        return "Request Times: " + MyConstant.REQ_TIMES.incrementAndGet() +
+        return "Request Times: " + MyConstant.REQ_TIMES.get() +
                 ", Request URL: " + MyConstant.TARGET +
                 ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
                 ", Failure Times:" + MyConstant.FAILURE_COUNT.get();

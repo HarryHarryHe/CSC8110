@@ -5,6 +5,7 @@ import com.example.loadgenerator.executors.MyExecutor;
 import com.example.loadgenerator.util.MyTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -19,6 +20,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Date;
+import java.util.concurrent.Semaphore;
 
 /***
  * @description: This method will start asynchronously, set the specified request FREQUENCY and
@@ -31,7 +33,7 @@ import java.util.Date;
  */
 @Component
 @Slf4j
-public class LoadGenerator {
+public class LoadGenerator implements CommandLineRunner {
 
     @Autowired
     private MyExecutor executorPool;
@@ -44,9 +46,12 @@ public class LoadGenerator {
                 .build();
     }
 
-    @Async("asyncExecutor")
-    @EventListener
-    public void startRequest(ContextRefreshedEvent event) {
+    @Override
+    public void run(String... args) throws Exception {
+        startRequest();
+    }
+
+    public void startRequest() {
         // Parameters validation check
         assert !MyConstant.TARGET.isBlank() : "TARGET SHOULD NOT BE BLANK";
         assert MyConstant.FREQUENCY > 0 : "FREQUENCY SHOULD BE GREATER THAN 0";
@@ -61,10 +66,16 @@ public class LoadGenerator {
                 .GET()
                 .build();
 
+        // Create a Semaphore that limit allowed requests per second(FREQUENCY)
+        final Semaphore semaphore = new Semaphore(MyConstant.FREQUENCY);
+
         while ((MyConstant.TOTAL_REQ_TIMES--) > 0) {
             for (int i = 0; i < MyConstant.FREQUENCY; i++) {
                 myExecutor.execute(() -> {
                     try {
+                        // Get one semaphore
+                        semaphore.acquire();
+
                         // Get current timestamp
                         long start = System.currentTimeMillis();
                         // Create a handler that converts the body of the response to a string
@@ -92,6 +103,9 @@ public class LoadGenerator {
                         log.info("InterruptedException occurred: " + e);
                     } catch (Exception e) {
                         log.info("UNKNOWN Exception occurred: " + e);
+                    } finally {
+                        // Release one semaphore
+                        semaphore.release();
                     }
                 });
             }
@@ -99,13 +113,13 @@ public class LoadGenerator {
             try {
                 // Simulate requests per second
                 Thread.sleep(1000);
-                // Shutdown the tasks in executor pool
-//                myExecutor.shutdown();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
-
-
+        // Shutdown the tasks in executor pool
+        // myExecutor.shutdown();
+        // Shutdown the executor pool in 10s waiting unfinished tasks to finish
+        myExecutor.setAwaitTerminationSeconds(10);
     }
 }
