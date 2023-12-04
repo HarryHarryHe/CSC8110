@@ -24,6 +24,6 @@ public class RequestClientService {
         return "Request Times: " + MyConstant.REQ_TIMES.get() +
                 ", Request URL: " + MyConstant.TARGET +
                 ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
-                ", Failure Times:" + MyConstant.FAILURE_COUNT.get();
+                ", Failure Times: " + MyConstant.FAILURE_COUNT.get();
     }
 }
