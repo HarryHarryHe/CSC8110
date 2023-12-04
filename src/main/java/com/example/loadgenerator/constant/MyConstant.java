@@ -21,15 +21,19 @@ public class MyConstant {
     /**
      * The total number of requests required to limit the program from running forever
      */
-    public static Integer TOTAL_REQ_TIMES = 100;
+    public static Integer TOTAL_REQ_TIMES = 1000;
     /**
      * Requested times
      */
     public static AtomicInteger REQ_TIMES = new AtomicInteger(0);
     /**
-     * Number of failed request timeouts
+     * Number of timeout failure request timeouts
      */
-    public static AtomicInteger FAILURE_COUNT = new AtomicInteger(0);
+    public static AtomicInteger TIMEOUT_FAILURE_COUNT = new AtomicInteger(0);
+    /**
+     * Number of request errors, used to control program stop
+     */
+    public static AtomicInteger OTHERS_FAILURE_COUNT = new AtomicInteger(0);
     /**
      * Total request response time
      */

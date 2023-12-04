@@ -18,6 +18,7 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /***
  * @description: This method will start asynchronously, set the specified request FREQUENCY and
@@ -57,7 +58,7 @@ public class LoadGenerator implements CommandLineRunner {
     /***
      * Makes a request based on the given TARGET URL and FREQUENCY requested per second
      */
-    public void startRequest() {
+    public void startRequest() throws InterruptedException {
         // Parameters validation check
         assert !MyConstant.TARGET.isBlank() : "TARGET SHOULD NOT BE BLANK";
         assert MyConstant.FREQUENCY > 0 : "FREQUENCY SHOULD BE GREATER THAN 0";
@@ -82,6 +83,8 @@ public class LoadGenerator implements CommandLineRunner {
                         // Get one semaphore
                         semaphore.acquire();
 
+                        // Request time plus 1
+                        MyConstant.REQ_TIMES.incrementAndGet();
                         // Get current timestamp
                         long start = System.currentTimeMillis();
                         // Create a handler that converts the body of the response to a string
@@ -90,25 +93,33 @@ public class LoadGenerator implements CommandLineRunner {
                         long end = System.currentTimeMillis();
                         // Get response time
                         long respTime = end - start;
+                        // When response time is longer than 10s, then the timeout_failure_time plus 1
+                        if (respTime > 10000){
+                            MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
+                        }
                         // Calculate the total response time
                         MyConstant.TOTAL_RESP_TIME.addAndGet(respTime);
-                        log.info("Request Times: " + MyConstant.REQ_TIMES.incrementAndGet() +
+                        log.info("Request Times: " + MyConstant.REQ_TIMES.get() +
                                 ", Request URL: " + MyConstant.TARGET +
                                 ", Response statusCode: " + response.statusCode() +
                                 ", Response Timestamp: " + respTime +
                                 ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
-                                ", Failure Times:" + MyConstant.FAILURE_COUNT.get() +
+                                ", Failure Times:" + MyConstant.TIMEOUT_FAILURE_COUNT.get() +
                                 ", Current DateTime: " + MyTools.date2str(new Date()));
                     } catch (HttpTimeoutException e) {
                         log.info("HttpTimeoutException occurred");
                         // Handling timeout exceptions
-                        MyConstant.FAILURE_COUNT.incrementAndGet();
-                    } catch (IOException e) {
-                        log.info("IOException occurred: " + e);
-                    } catch (InterruptedException e) {
-                        log.info("InterruptedException occurred: " + e);
+                        MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
+                        // Total response time plus 10s
+                        MyConstant.TOTAL_RESP_TIME.addAndGet(10000);
                     } catch (Exception e) {
-                        log.info("UNKNOWN Exception occurred: " + e);
+                        log.info("Exception occurred: " + e);
+                        // If there are too many request exceptions, the thread pool will be closed early and the program will end.
+                        if (MyConstant.OTHERS_FAILURE_COUNT.incrementAndGet() > 50) {
+                            // Shutdown the executor pool in 10s waiting unfinished tasks to finish
+                            myExecutor.shutdown();
+                            System.exit(1);
+                        }
                     } finally {
                         // Release one semaphore
                         semaphore.release();
@@ -122,10 +133,17 @@ public class LoadGenerator implements CommandLineRunner {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+
         }
+
         // Shutdown the tasks in executor pool
-        // myExecutor.shutdown();
-        // Shutdown the executor pool in 10s waiting unfinished tasks to finish
-        myExecutor.setAwaitTerminationSeconds(10);
+        myExecutor.shutdown();
+        // Waiting unfinished tasks to finish and shutdown the executor pool in 10s
+        if (!myExecutor.getThreadPoolExecutor().awaitTermination(10, TimeUnit.SECONDS)) {
+            log.info("Shutdown Now! Even though there are still some tasks that do not be finished...");
+            myExecutor.shutdown();
+        }
+
+
     }
 }
