@@ -5,7 +5,10 @@ import com.example.loadgenerator.executors.MyExecutor;
 import com.example.loadgenerator.util.MyTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 @Slf4j
-public class LoadGenerator implements CommandLineRunner {
+public class LoadGenerator implements ApplicationRunner {
 
     @Autowired
     private MyExecutor executorPool;
@@ -46,12 +49,14 @@ public class LoadGenerator implements CommandLineRunner {
 
     /***
      * This method is automatically executed after the
-     * Spring Boot application is fully started by implementing the Command Line Runner interface.
+     * Spring Boot application is fully started by implementing the ApplicationRunner interface.
+     * Async for start docker build, if there are not this annotation, it could not be build
      * @param args
      * @throws Exception
      */
     @Override
-    public void run(String... args) throws Exception {
+    @Async
+    public void run(ApplicationArguments args) throws Exception {
         startRequest();
     }
 
@@ -146,4 +151,6 @@ public class LoadGenerator implements CommandLineRunner {
 
 
     }
+
+
 }
