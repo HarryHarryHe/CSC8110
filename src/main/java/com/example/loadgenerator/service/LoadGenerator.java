@@ -11,13 +11,16 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
 import java.util.Date;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -76,18 +79,15 @@ public class LoadGenerator implements ApplicationRunner {
                 .GET()
                 .build();
 
-        // Create a Semaphore that limit allowed requests per second(FREQUENCY)
-        final Semaphore semaphore = new Semaphore(MyConstant.FREQUENCY);
-
         while ((MyConstant.TOTAL_REQ_TIMES--) > 0) {
+            // Create a CountDownLatch that limit allowed requests per second(FREQUENCY)
+            CountDownLatch countDownLatch = new CountDownLatch(MyConstant.FREQUENCY);
             for (int i = 0; i < MyConstant.FREQUENCY; i++) {
                 myExecutor.execute(() -> {
+                    // Define the response time
+                    long respTime = 0L;
+                    // Create a HttpResponse
                     try {
-                        // Get one semaphore
-                        semaphore.acquire();
-
-                        // Request time plus 1
-                        MyConstant.REQ_TIMES.incrementAndGet();
                         // Get current timestamp
                         long start = System.currentTimeMillis();
                         // Create a handler that converts the body of the response to a string
@@ -95,39 +95,43 @@ public class LoadGenerator implements ApplicationRunner {
                         // Get the current time after the request is completed
                         long end = System.currentTimeMillis();
                         // Get response time
-                        long respTime = end - start;
+                        respTime = end - start;
                         // When response time is longer than 10s, then the timeout_failure_time plus 1
-                        if (respTime > 10000){
+                        if (respTime > MyConstant.TIMEOUT_LIMIT_MS) {
                             MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
                         }
                         // Calculate the total response time
                         MyConstant.TOTAL_RESP_TIME.addAndGet(respTime);
-                        log.info("Request Times: " + MyConstant.REQ_TIMES.get() +
+                        log.info("Request Times: " + MyConstant.REQ_TIMES.incrementAndGet() +
                                 ", Request URL: " + MyConstant.TARGET +
-                                ", Response statusCode: " + response.statusCode() +
+                                ", Response Status: " + response.statusCode() +
                                 ", Response Timestamp: " + respTime + " ms" +
                                 ", Total AVG Timeout: " + Math.round((float) MyConstant.TOTAL_RESP_TIME.get() / MyConstant.REQ_TIMES.get()) + " ms" +
                                 ", Failure Times:" + MyConstant.TIMEOUT_FAILURE_COUNT.get() +
                                 ", Current DateTime: " + MyTools.date2str(new Date()));
                     } catch (HttpTimeoutException e) {
-                        log.info("HttpTimeoutException occurred");
+                        log.info("HttpTimeoutException occurred" + e);
                         // Handling timeout exceptions
                         MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
                         // Total response time plus 60s
                         MyConstant.TOTAL_RESP_TIME.addAndGet(60000);
+                    } catch (ClosedChannelException e) {
+                        log.info("ClosedChannelException occurred: " + e);
+                    } catch (ConnectException e){
+                        log.info("ConnectException: the connection could not be established successfully " + e);
                     } catch (Exception e) {
-                        log.info("Exception occurred: " + e);
-                        // If there are too many request exceptions, the thread pool will be closed early and the program will end.
-//                        if (MyConstant.OTHERS_FAILURE_COUNT.incrementAndGet() > 50) {
-//                            // Shutdown the executor pool in 10s waiting unfinished tasks to finish
-//                            myExecutor.shutdown();
-//                            System.exit(1);
-//                        }
+                        log.info("other Exception occurred: " + e);
                     } finally {
-                        // Release one semaphore
-                        semaphore.release();
+                        // Countdown the completed request
+                        countDownLatch.countDown();
                     }
                 });
+            }
+            try {
+                // Waiting all requests finished
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                log.info("countDownLatch InterruptedException Exception occurred: " + e);
             }
 
             try {

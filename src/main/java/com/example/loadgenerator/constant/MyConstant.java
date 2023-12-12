@@ -17,7 +17,11 @@ public class MyConstant {
      * Requests per second
      */
     public static final int FREQUENCY = Integer.parseInt(System.getenv().getOrDefault("FREQUENCY", "2"));
-    //    private static Integer REQ_TIMES = Integer.parseInt(System.getenv("REQ_TIMES"));
+    /**
+     * Default timeout limit 10000ms = 10s
+     */
+    public static final int TIMEOUT_LIMIT_MS = Integer.parseInt(System.getenv().getOrDefault("TIMEOUT", "10000"));
+
     /**
      * The total number of requests required to limit the program from running forever
      */
