@@ -21,7 +21,7 @@ public class MyConstant {
     /**
      * The total number of requests required to limit the program from running forever
      */
-    public static Integer TOTAL_REQ_TIMES = 1000;
+    public static Integer TOTAL_REQ_TIMES = 1000000;
     /**
      * Requested times
      */
