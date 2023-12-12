@@ -41,7 +41,7 @@ public class LoadGenerator implements ApplicationRunner {
 
     public LoadGenerator() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10)) // Set connection timeout 10s
+                .connectTimeout(Duration.ofSeconds(60)) // Set connection timeout 60s
                 .build();
     }
 
@@ -61,7 +61,7 @@ public class LoadGenerator implements ApplicationRunner {
     /***
      * Makes a request based on the given TARGET URL and FREQUENCY requested per second
      */
-    public void startRequest() throws InterruptedException {
+    public void startRequest() {
         // Parameters validation check
         assert !MyConstant.TARGET.isBlank() : "TARGET SHOULD NOT BE BLANK";
         assert MyConstant.FREQUENCY > 0 : "FREQUENCY SHOULD BE GREATER THAN 0";
@@ -72,7 +72,7 @@ public class LoadGenerator implements ApplicationRunner {
         // Building HttpRequest
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(MyConstant.TARGET))
-                .timeout(Duration.ofSeconds(10)) // Set request timeout 10s
+                .timeout(Duration.ofSeconds(60)) // Set request timeout 60s
                 .GET()
                 .build();
 
@@ -113,16 +113,16 @@ public class LoadGenerator implements ApplicationRunner {
                         log.info("HttpTimeoutException occurred");
                         // Handling timeout exceptions
                         MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
-                        // Total response time plus 10s
-                        MyConstant.TOTAL_RESP_TIME.addAndGet(10000);
+                        // Total response time plus 60s
+                        MyConstant.TOTAL_RESP_TIME.addAndGet(60000);
                     } catch (Exception e) {
                         log.info("Exception occurred: " + e);
                         // If there are too many request exceptions, the thread pool will be closed early and the program will end.
-                        if (MyConstant.OTHERS_FAILURE_COUNT.incrementAndGet() > 50) {
-                            // Shutdown the executor pool in 10s waiting unfinished tasks to finish
-                            myExecutor.shutdown();
-                            System.exit(1);
-                        }
+//                        if (MyConstant.OTHERS_FAILURE_COUNT.incrementAndGet() > 50) {
+//                            // Shutdown the executor pool in 10s waiting unfinished tasks to finish
+//                            myExecutor.shutdown();
+//                            System.exit(1);
+//                        }
                     } finally {
                         // Release one semaphore
                         semaphore.release();
@@ -134,7 +134,7 @@ public class LoadGenerator implements ApplicationRunner {
                 // Simulate requests per second
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                log.info("InterruptedException Exception occurred: " + e);
             }
 
         }
@@ -142,9 +142,14 @@ public class LoadGenerator implements ApplicationRunner {
         // Shutdown the tasks in executor pool
         myExecutor.shutdown();
         // Waiting unfinished tasks to finish and shutdown the executor pool in 10s
-        if (!myExecutor.getThreadPoolExecutor().awaitTermination(10, TimeUnit.SECONDS)) {
-            log.info("Shutdown Now! Even though there are still some tasks that do not be finished...");
-            myExecutor.shutdown();
+        try {
+            if (!myExecutor.getThreadPoolExecutor().awaitTermination(10, TimeUnit.SECONDS)) {
+                log.info("Shutdown Now! Even though there are still some tasks that do not be finished...");
+                myExecutor.shutdown();
+            }
+        } catch (InterruptedException e) {
+            log.info("myExecutor InterruptedException Exception occurred: " + e);
+            throw new RuntimeException(e);
         }
 
 
