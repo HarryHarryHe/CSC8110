@@ -114,7 +114,7 @@ public class LoadGenerator implements ApplicationRunner {
                         // Handling timeout exceptions
                         MyConstant.TIMEOUT_FAILURE_COUNT.incrementAndGet();
                         // Total response time plus 60s
-                        MyConstant.TOTAL_RESP_TIME.addAndGet(60000);
+                        MyConstant.TOTAL_RESP_TIME.addAndGet(600000);
                     } catch (ClosedChannelException e) {
                         log.info("ClosedChannelException occurred: " + e);
                     } catch (ConnectException e){
